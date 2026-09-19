@@ -59,6 +59,13 @@ type CoderResponse = { changes: { path: string; operation: "create" | "modify" |
 type ReviewerResponse = { requirementsCovered?: boolean; unrelatedChanges?: boolean; likelySyntaxRisk?: boolean; missingRequirements: string[]; apiBreakageRisk?: boolean; evidenceSupported?: boolean; verdict?: "approve" | "revise" | "refuse"; feedback?: string[]; requirementCoverage?: { id: string; verdict: string }[] };
 type GithubClient = <T>(path: string, raw?: boolean) => Promise<T>;
 export type CodexRunner = (prompt: string, schema?: object) => Promise<string>;
+export type PlannerRepair = {
+  failedRequirementIds: string[];
+  failureType: "implementation_location_missing";
+  targetedSearchQueries: string[];
+  likelyFileRoles: ["source", "config", "types"];
+  repairAttempt: 1;
+};
 
 export type PilotDependencies = { github?: GithubClient; runCodex?: CodexRunner };
 
@@ -78,6 +85,7 @@ type AgentRunState = {
   searches: Search[];
   inspectedFiles: InspectedFile[];
   evidence?: EvidenceReport;
+  plannerRepair?: PlannerRepair;
   plan: PlanStep[];
   files: FileChange[];
   explanations: FileExplanation[];
@@ -499,6 +507,85 @@ async function exploreRepository(state: AgentRunState, encoded: string, client: 
 
 const IMPL_ROLES = ["source", "config", "types"];
 
+export function findImplementationLocationGaps(
+  steps: { file: string; requirementsCovered?: string[] }[],
+  requirements: { id: string; type: string; text?: string }[]
+) {
+  const implementationIds = new Set(requirements.filter((requirement) => requirement.type === "mustImplement").map((requirement) => requirement.id));
+  const incompatibleRoles = new Map<string, Set<FileRole>>();
+  const coveredByProduction = new Set<string>();
+
+  for (const step of steps) {
+    const role = classifyFileRole(step.file);
+    for (const requirementId of step.requirementsCovered ?? []) {
+      if (!implementationIds.has(requirementId)) continue;
+      if (IMPL_ROLES.includes(role)) coveredByProduction.add(requirementId);
+      else {
+        const roles = incompatibleRoles.get(requirementId) ?? new Set<FileRole>();
+        roles.add(role);
+        incompatibleRoles.set(requirementId, roles);
+      }
+    }
+  }
+
+  const requirementIds = [...implementationIds].filter((id) => !coveredByProduction.has(id));
+  return {
+    requirementIds,
+    incompatibleRoles: requirementIds.flatMap((id) => [...(incompatibleRoles.get(id) ?? [])]),
+  };
+}
+
+export function implementationLocationQueries(
+  requirements: { id: string; text: string }[],
+  analysis?: Pick<IssueAnalysis, "importantSymbols" | "importantPaths">
+) {
+  const stopWords = new Set(["this", "that", "with", "from", "when", "where", "which", "should", "would", "could", "must", "have", "only", "into", "then", "than", "their", "there", "implementation", "requirement", "behavior", "change", "file", "files", "code", "documentation", "readme", "tests", "test"]);
+  const identifiers = new Set<string>(analysis?.importantSymbols ?? []);
+  const keywords = new Set<string>();
+
+  for (const requirement of requirements) {
+    for (const match of requirement.text.matchAll(/\`([A-Za-z_$][A-Za-z0-9_$.-]*)\`|\b([A-Za-z_$][A-Za-z0-9_$.-]{2,})\b/g)) {
+      const value = (match[1] || match[2]).replace(/\(.*$/, "");
+      if (!stopWords.has(value.toLowerCase())) identifiers.add(value);
+    }
+    if (/\b(command|handler|route|cli)\b/i.test(requirement.text)) keywords.add("handler");
+    if (/\b(config|setting|environment|env|option|flag)\b/i.test(requirement.text)) keywords.add("config");
+    if (/\b(api|export|public|interface|type)\b/i.test(requirement.text)) keywords.add("export");
+  }
+
+  const pathTerms = (analysis?.importantPaths ?? [])
+    .flatMap((path) => path.split("/").filter((part) => /^(src|lib|app|packages|config|types)$/i.test(part)));
+  const candidates = [...identifiers, ...keywords, ...pathTerms];
+  return normalizedQueries(candidates).slice(0, MAX_SEARCHES_PER_ROUND);
+}
+
+function recoveryProductionCandidates(
+  state: AgentRunState,
+  steps: { file: string; requirementsCovered?: string[] }[],
+  queries: string[],
+  matches: RankedPath[]
+) {
+  const allPaths = state.manifest.map((file) => file.path);
+  const inspected = new Set(state.originals.keys());
+  const mappedPaths = steps.map((step) => step.file);
+  const nearby = findUninspectedImplCandidates(mappedPaths, allPaths, inspected);
+  const queryTerms = queries.flatMap((query) => query.toLowerCase().split(/\s+/));
+  const ranked = [
+    ...matches.map((match) => match.path),
+    ...nearby,
+    ...state.manifest
+      .filter((file) => !inspected.has(file.path) && IMPL_ROLES.includes(classifyFileRole(file.path)))
+      .filter((file) => queryTerms.some((term) => file.path.toLowerCase().includes(term)))
+      .map((file) => file.path),
+    ...(state.structure?.source ?? []),
+    ...(state.structure?.configuration ?? []),
+    ...(state.structure?.declarations ?? []),
+  ];
+  return [...new Set(ranked)]
+    .filter((path) => !inspected.has(path) && IMPL_ROLES.includes(classifyFileRole(path)))
+    .slice(0, MAX_FILES_PER_ROUND);
+}
+
 /** Implementation files near mis-targeted test files (same dir or same stem), not yet inspected. */
 export function findUninspectedImplCandidates(testFiles: string[], manifestPaths: string[], inspected: Set<string> | string[]): string[] {
   const seen = inspected instanceof Set ? inspected : new Set(inspected);
@@ -560,6 +647,47 @@ async function createPlan(state: AgentRunState, encoded: string, client: GithubC
   let previousPlan: PlannerResponse | undefined;
   let routedBackCount = 0;
   let routedBackForImpl = false;
+  let implementationRepair: PlannerRepair | undefined;
+
+  const repairImplementationLocation = async (
+    gaps: ReturnType<typeof findImplementationLocationGaps>,
+    steps: { file: string; requirementsCovered?: string[] }[]
+  ) => {
+    const failedRequirements = state.requirements.filter((requirement) => gaps.requirementIds.includes(requirement.id));
+    const targetedSearchQueries = implementationLocationQueries(failedRequirements, state.analysis);
+    implementationRepair = {
+      failedRequirementIds: gaps.requirementIds,
+      failureType: "implementation_location_missing",
+      targetedSearchQueries,
+      likelyFileRoles: ["source", "config", "types"],
+      repairAttempt: 1,
+    };
+    state.plannerRepair = implementationRepair;
+    for (const requirement of failedRequirements) {
+      requirement.status = "implementation_location_missing";
+      requirement.detail = "No source, config, or type implementation location was mapped by the initial plan.";
+    }
+    emit({ type: "requirements", requirements: state.requirements });
+    const roleLabel = gaps.incompatibleRoles.length
+      ? [...new Set(gaps.incompatibleRoles)].map((role) => role === "docs" ? "documentation" : role === "test" ? "test" : role).join(", ")
+      : "non-production";
+    tools.activity(
+      "planning",
+      "Locating implementation files",
+      `Requirements ${gaps.requirementIds.join(", ")} map only to ${roleLabel} files; searching for source, config, and type locations.`,
+      "warning"
+    );
+    tools.stage("exploring", "investigating");
+    const matches = await searchRepository(state, encoded, targetedSearchQueries, client, tools, emit);
+    const candidates = recoveryProductionCandidates(state, steps, targetedSearchQueries, matches);
+    if (candidates.length) {
+      tools.activity("exploring", "Inspecting production candidates", `Read ${candidates.join(", ")} before planner repair.`);
+      await inspectFiles(state, candidates, encoded, client, tools, emit);
+    } else {
+      tools.activity("exploring", "No production candidates found", "Targeted search found no inspectable source, config, or type files.", "warning");
+    }
+    tools.stage("exploring", "completed");
+  };
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const input = {
@@ -571,11 +699,12 @@ async function createPlan(state: AgentRunState, encoded: string, client: GithubC
       contents: Object.fromEntries(state.originals),
       filesAvailableToChange: [...state.originals.keys()],
       creationRoots: creationRoots(state),
+      plannerRepair: implementationRepair,
     };
 
     const result = await responseJson<PlannerResponse>(
       codex,
-      "You are the implementation planner for Codex Pilot. The evidence gate has determined that evidence is ready_to_patch. Ground your plan in the validated findings, exact inspected contents, and requirements contract. Each step needs file, operation (create, modify, or delete), action, reason, and explicit requirementsCovered IDs (e.g. ['R1']). modify/delete paths must be exact inspected repository-relative paths from filesAvailableToChange. create paths must be new, repository-relative source/test/type paths beneath creationRoots. filesAllowedToChange must contain all and only step files. For implementation issues, at least one step must change production implementation code (source, config, or declarations), not only tests or docs. Only block if there is a concrete contradiction between the issue requirements and repository facts. Reading tests is allowed and proposed test source changes are allowed; never propose executing tests or the repository. Correct validationErrors if provided.",
+      "You are the implementation planner for Codex Pilot. The evidence gate has determined that evidence is ready_to_patch. Ground your plan in the validated findings, exact inspected contents, and requirements contract. Each step needs file, operation (create, modify, or delete), action, reason, and explicit requirementsCovered IDs (e.g. ['R1']). modify/delete paths must be exact inspected repository-relative paths from filesAvailableToChange. create paths must be new, repository-relative source/test/type paths beneath creationRoots. filesAllowedToChange must contain all and only step files. For implementation issues, every implementation requirement must map to at least one production source, config, or declaration step. README files, documentation, and tests can support or verify an implementation requirement but can never be its sole target. When plannerRepair is present, use the newly inspected production candidates to repair every failed requirement ID; do not repeat a docs-only or tests-only mapping. Only block if there is a concrete contradiction between the issue requirements and repository facts. Reading tests is allowed and proposed test source changes are allowed; never propose executing tests or the repository. Correct validationErrors if provided.",
       JSON.stringify({ ...input, previousPlan, validationErrors: errors }),
       plannerSchema,
       "planning"
@@ -610,6 +739,24 @@ async function createPlan(state: AgentRunState, encoded: string, client: GithubC
     }
 
     if (errors.length) {
+      const locationGaps = isImplementationIssue(state.analysis)
+        ? findImplementationLocationGaps(steps, state.requirements)
+        : { requirementIds: [], incompatibleRoles: [] as FileRole[] };
+      if (locationGaps.requirementIds.length) {
+        if (!implementationRepair) {
+          await repairImplementationLocation(locationGaps, steps);
+          attempt = -1;
+          previousPlan = result;
+          errors = [];
+          continue;
+        }
+        fail(
+          "PLANNING_FAILED_IMPLEMENTATION_LOCATION_NOT_FOUND",
+          "Implementation location not found",
+          `Implementation locations could not be found for ${locationGaps.requirementIds.join(", ")} after targeted exploration and planner repair. These requirements remain mapped only to ${[...new Set(locationGaps.incompatibleRoles)].join(", ") || "non-production"} files.`,
+          true
+        );
+      }
       // If planner referenced repository files that were not yet inspected, back-route to targeted exploration
       const missingRepoFiles = steps.filter((step) => step.operation !== "create").map((step) => step.file).filter((path) => !state.originals.has(path) && state.manifest.some((file) => file.path === path));
       if (routedBackCount < 2 && missingRepoFiles.length > 0 && state.inspectedFiles.length < MAX_FILES_INSPECTED) {
@@ -709,6 +856,25 @@ async function createPlan(state: AgentRunState, encoded: string, client: GithubC
       } else if (requirement.type === "mustTest" && !testCoveredByTest.has(requirement.id)) {
         errors.push(`Test requirement ${requirement.id} must map to a test file.`);
       }
+    }
+
+    const locationGaps = isImplIssue
+      ? findImplementationLocationGaps(steps, state.requirements)
+      : { requirementIds: [], incompatibleRoles: [] as FileRole[] };
+    if (locationGaps.requirementIds.length) {
+      if (!implementationRepair) {
+        await repairImplementationLocation(locationGaps, steps);
+        attempt = -1;
+        previousPlan = result;
+        errors = [];
+        continue;
+      }
+      fail(
+        "PLANNING_FAILED_IMPLEMENTATION_LOCATION_NOT_FOUND",
+        "Implementation location not found",
+        `Implementation locations could not be found for ${locationGaps.requirementIds.join(", ")} after targeted exploration and planner repair. These requirements remain mapped only to ${[...new Set(locationGaps.incompatibleRoles)].join(", ") || "non-production"} files.`,
+        true
+      );
     }
 
     // Recovery when implementation requirements land on test/docs files: aim the
@@ -1344,12 +1510,18 @@ export async function streamPilotRun(issueUrl: string, emit: (event: RunEvent) =
       ...(state.issue && state.repository
         ? {
             run: runFor(state, tools.elapsed(), "refused", {
-              kind: (diagnostic.code === "PLAN_SCOPE_INVALID" || diagnostic.code === "SOURCE_CHANGE_REQUIRED") ? "planning_failed" : "insufficient_evidence",
+              kind: (diagnostic.code === "PLAN_SCOPE_INVALID" || diagnostic.code === "SOURCE_CHANGE_REQUIRED" || diagnostic.code === "PLANNING_FAILED_IMPLEMENTATION_LOCATION_NOT_FOUND") ? "planning_failed" : "insufficient_evidence",
               title: diagnostic.title,
               code: diagnostic.code,
               reason: diagnostic.message,
-              suggestedNextStep: /must map to implementation|SOURCE_CHANGE_REQUIRED|only targets tests or docs/i.test(diagnostic.message)
-                ? "The planner twice aimed implementation requirements at test files. Retry — each run explores differently — or narrow the issue toward the implementation file."
+              suggestedNextStep: diagnostic.code === "PLANNING_FAILED_IMPLEMENTATION_LOCATION_NOT_FOUND"
+                ? /\bdocs?\b|documentation/i.test(diagnostic.message)
+                  ? "The planner mapped implementation requirements only to documentation files. Codex Pilot attempted to locate corresponding source, config, or type files."
+                  : /\btest\b/i.test(diagnostic.message)
+                    ? "The planner mapped implementation requirements only to test files. Codex Pilot attempted to locate corresponding source, config, or type files."
+                    : "The planner could not locate compatible source, config, or type files for the implementation requirements."
+                : /must map to implementation|SOURCE_CHANGE_REQUIRED|only targets tests or docs/i.test(diagnostic.message)
+                  ? "The planner mapped implementation requirements only to non-production files. Codex Pilot attempted to locate corresponding source, config, or type files."
                 : diagnostic.retryable
                   ? "Retry after resolving the reported service or output error."
                   : "Check the issue and repository details.",

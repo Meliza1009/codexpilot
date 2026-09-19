@@ -19,7 +19,15 @@ export type VerificationReport = {
 
 export type FileRole = "source" | "test" | "docs" | "config" | "generated" | "types";
 export type RequirementType = "mustImplement" | "mustPreserve" | "mustTest" | "optionalDocs";
-export type StructuredRequirement = { id: string; type: RequirementType; text: string; status: "unmapped" | "planned" | "implemented" | "tested" | "preserved" | "failed"; coveredByFiles?: string[]; reviewVerdict?: "pass" | "fail"; detail?: string };
+export type StructuredRequirement = {
+  id: string;
+  type: RequirementType;
+  text: string;
+  status: "unmapped" | "implementation_location_missing" | "planned" | "implemented" | "tested" | "preserved" | "failed";
+  coveredByFiles?: string[];
+  reviewVerdict?: "pass" | "fail";
+  detail?: string;
+};
 export type Stage = { id: StageId; label: string; status: "pending" | "active" | "complete" | "skipped" | "failed"; elapsedMs?: number };
 export type Activity = { id: string; stage: StageId; action: string; detail: string; elapsedMs: number; status: "completed" | "warning" };
 export type Search = { id?: string; round?: number; query: string; matches: number; detail: string };

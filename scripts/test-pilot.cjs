@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const load = require('./load-pilot.cjs');
-const { streamPilotRun, explorerSchema, plannerSchema, coderSchema, reviewSchema, planImplRecovery, findUninspectedImplCandidates } = load('pilot');
+const { streamPilotRun, explorerSchema, plannerSchema, coderSchema, reviewSchema, planImplRecovery, findUninspectedImplCandidates, findImplementationLocationGaps, implementationLocationQueries } = load('pilot');
 const { normalizeQuery, candidateScore, relatedPaths, proposedDiff, extractStructuredRequirements, analysisSchema, isImplementationIssue, checkTestImportsAgainstSource } = load('investigation');
 // Strict structured output rejects any object schema where a properties key is
 // missing from required (once broke every patch-writing call: missing 'role').
@@ -72,7 +72,22 @@ console.log('PASS agent schemas satisfy strict required-properties invariant');
   assert.deepEqual(recovery.backroute, []);
 }
 assert.deepEqual(findUninspectedImplCandidates(['test/a.ts'], ['src/a.ts', 'src/a.ts'], ['src/a.ts']), []);
-console.log('PASS mis-aimed implementation plans get a recovery directive or back-route');
+{
+  const requirements = [{ id: 'R1', type: 'mustImplement', text: 'Expose validateName from the public API' }];
+  assert.deepEqual(findImplementationLocationGaps([{ file: 'README.md', requirementsCovered: ['R1'] }], requirements).requirementIds, ['R1']);
+  assert.deepEqual(findImplementationLocationGaps([{ file: 'test/validator.test.ts', requirementsCovered: ['R1'] }], requirements).requirementIds, ['R1']);
+  assert.deepEqual(findImplementationLocationGaps([
+    { file: 'src/validator.ts', requirementsCovered: ['R1'] },
+    { file: 'README.md', requirementsCovered: ['R1'] },
+  ], requirements).requirementIds, []);
+  assert.deepEqual(findImplementationLocationGaps([
+    { file: 'src/index.ts', requirementsCovered: ['R1'] },
+    { file: 'types/index.d.ts', requirementsCovered: ['R1'] },
+  ], requirements).requirementIds, []);
+  assert.deepEqual(findImplementationLocationGaps([{ file: 'README.md', requirementsCovered: ['R1'] }], [{ id: 'R1', type: 'optionalDocs', text: 'Document validateName' }]).requirementIds, []);
+  assert.ok(implementationLocationQueries(requirements, { importantSymbols: ['validateName'], importantPaths: ['src/validator.ts'] }).includes('validateName'));
+}
+console.log('PASS implementation mappings reject docs/tests and accept production support');
 const analysis = { kinds: ['validation'], summary: 'Reject empty names', expectedBehavior: 'Empty names rejected', observedBehavior: 'Empty names accepted', importantSymbols: ['validateName'], importantPaths: ['src/validator.ts'], errorMessages: [], likelyEvidenceSurfaces: ['validator', 'test'], maintainerClarifications: [], reproductionDetails: [], proposedApproaches: [], constraints: [] };
 for (const query of ['index', 'package', 'source', 'the export map and readme', 'Search package.json and build configuration to understand runtime entry points']) assert.equal(normalizeQuery(query), null);
 for (const query of ['clsx/lite', 'moduleResolution', 'typesVersions', 'ClassValue', 'declare namespace clsx']) assert.equal(normalizeQuery(query), query);
@@ -107,7 +122,7 @@ assert.ok(docRequirements.every((r) => r.type === 'optionalDocs'));
 console.log('PASS checkTestImportsAgainstSource respects test helpers and inspected files');
 
 async function scenario(name, options = {}) {
-  let gates = 0, reviews = 0, coderCalls = 0, malformed = 0, plans = 0, sawImplDirective = false;
+  let gates = 0, reviews = 0, coderCalls = 0, malformed = 0, plans = 0, sawImplDirective = false, sawLocationRepair = false;
   const files = {
     'src/validator.ts': 'export const validateName = (name: string) => true;\n',
     'test/validator.test.ts': 'import { validateName } from "../src/validator";\n',
@@ -150,17 +165,31 @@ async function scenario(name, options = {}) {
       if (schema.required.includes('goal')) {
         plans++;
         if (options.cumulative) { assert.match(prompt, /Always returns true/); assert.match(prompt, /Referenced rule/); }
+        if (options.docsOnlyRepair || options.docsOnlyFailure) {
+          const isRepair = prompt.includes('"failureType":"implementation_location_missing"');
+          if (isRepair) {
+            sawLocationRepair = true;
+            assert.match(prompt, /targetedSearchQueries/);
+            assert.match(prompt, /source.*config.*types/i);
+          }
+          if (!isRepair || options.docsOnlyFailure) {
+            return JSON.stringify({ goal: 'Documentation-only implementation plan', filesAllowedToChange: ['README.md', 'test/validator.test.ts'], steps: [
+              { file: 'README.md', operation: 'modify', action: 'Document validation', reason: 'Document behavior', requirementsCovered: ['R1', 'R2'] },
+              { file: 'test/validator.test.ts', operation: 'modify', action: 'Test validation', reason: 'Verify behavior', requirementsCovered: ['R3'] },
+            ] });
+          }
+        }
         // Early attempts aim R1 (mustImplement) at the test file while an
         // implementation step covers R2; the retry must carry REPLAN_DIRECTIVE
         // naming an inspected implementation file. Match on prompt content
         // rather than call count (back-routes reset the attempt loop).
-        if (options.repairImplMapping && !prompt.includes('REPLAN_DIRECTIVE')) {
+        if (options.repairImplMapping && !prompt.includes('REPLAN_DIRECTIVE') && !prompt.includes('implementation_location_missing')) {
           return JSON.stringify({ goal: 'Mis-aimed attempt', filesAllowedToChange: ['src/validator.ts', 'test/validator.test.ts'], steps: [
             { file: 'src/validator.ts', operation: 'modify', action: 'Touch validator', reason: 'Related surface', requirementsCovered: ['R2'] },
             { file: 'test/validator.test.ts', operation: 'modify', action: 'Cover everything with tests', reason: 'Verify', requirementsCovered: ['R1', 'R3'] },
           ] });
         }
-        if (options.repairImplMapping && prompt.includes('REPLAN_DIRECTIVE')) {
+        if (options.repairImplMapping && (prompt.includes('REPLAN_DIRECTIVE') || prompt.includes('implementation_location_missing'))) {
           sawImplDirective = true;
           assert.match(prompt, /src\/validator\.ts/);
         }
@@ -235,9 +264,15 @@ async function scenario(name, options = {}) {
     },
   });
   const terminal = events.at(-1);
-  if (options.testOnlyPlan) {
-    assert.equal(terminal.error.code, 'PLAN_SCOPE_INVALID');
-    assert.match(terminal.error.message, /SOURCE_CHANGE_REQUIRED/);
+  if (options.docsOnlyFailure) {
+    assert.equal(terminal.error.code, 'PLANNING_FAILED_IMPLEMENTATION_LOCATION_NOT_FOUND');
+    assert.match(terminal.error.message, /R1/);
+    assert.equal(terminal.run.refusal.code, 'PLANNING_FAILED_IMPLEMENTATION_LOCATION_NOT_FOUND');
+    assert.match(terminal.run.refusal.suggestedNextStep, /documentation files/);
+    assert.equal(sawLocationRepair, true);
+  } else if (options.testOnlyPlan) {
+    assert.equal(terminal.error.code, 'PLANNING_FAILED_IMPLEMENTATION_LOCATION_NOT_FOUND');
+    assert.match(terminal.error.message, /R1/);
   } else if (options.invalidPlan) {
     assert.equal(terminal.error.code, 'PLAN_SCOPE_INVALID'); assert.match(terminal.error.message, /invented.ts/); assert.ok(plans >= 2); assert.equal(coderCalls, 0);
   } else if (options.malformed && !options.recover) { assert.equal(terminal.error.code, 'MALFORMED_AGENT_OUTPUT'); }
@@ -263,6 +298,11 @@ async function scenario(name, options = {}) {
     assert.ok(run.stages.every((stage) => !['pending', 'active'].includes(stage.status)));
     assert.equal(new Set(run.searches.map((search) => search.query.toLowerCase())).size, run.searches.length);
     assert.equal(new Set(run.inspectedFiles.map((file) => file.path)).size, run.inspectedFiles.length);
+    if (options.docsOnlyRepair) {
+      assert.equal(sawLocationRepair, true);
+      assert.ok(run.searches.length > 0, 'targeted exploration searched before repairing the plan');
+      assert.notEqual(run.requirements.find((requirement) => requirement.id === 'R1').status, 'implementation_location_missing');
+    }
     if (options.outOfScope || options.budget || options.badPath) {
       assert.equal(run.status, 'refused');
       assert.equal(run.patch, '');
@@ -316,7 +356,7 @@ async function scenario(name, options = {}) {
     }
     if (options.budget) { assert.equal(run.refusal.code, 'BUDGET_EXHAUSTED'); assert.doesNotMatch(run.refusal.suggestedNextStep, /runtime/); }
     if (options.revise || options.reviewFails) { assert.equal(reviews, 2); assert.equal(coderCalls, 2); }
-    if (options.repairImplMapping) { assert.ok(sawImplDirective); assert.ok(plans >= 3); }
+    if (options.repairImplMapping) { assert.ok(sawImplDirective); assert.ok(plans >= 2); }
     if (options.gateRepair) { assert.equal(coderCalls, 2); assert.equal(reviews, 1); }
     if (options.firstReviewRefuses) { assert.equal(reviews, 1); assert.equal(coderCalls, 1); }
     if (options.outOfScope) assert.equal(run.refusal.code, 'OUT_OF_SCOPE_HARDWARE');
@@ -352,6 +392,8 @@ async function scenario(name, options = {}) {
   await scenario('unsolicited docs change rejected by pre-review static gate', { unsolicitedDocs: true });
   await scenario('pre-review static gate triggers repair loop and recovers', { gateRepair: true });
   await scenario('planner aimed at tests is redirected to implementation files', { repairImplMapping: true });
+  await scenario('docs-only implementation plan triggers targeted exploration and repair', { docsOnlyRepair: true });
+  await scenario('unrecoverable docs-only mapping names unmapped requirements', { docsOnlyFailure: true });
   await scenario('closed issue proceeds with a warning and finishes', { closedIssue: true });
   await scenario('new file allowed beneath docs creation root', { createDocsFile: true });
   process.env.GITHUB_PR_TOKEN = 'sentinel-codex-stderr-9z9z';
@@ -361,5 +403,3 @@ async function scenario(name, options = {}) {
     delete process.env.GITHUB_PR_TOKEN;
   }
 })();
-
-
