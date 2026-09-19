@@ -23,8 +23,8 @@ const subscribeToLocation = () => () => {};
 const hostedPreviewFromLocation = () => configuredHostedPreview || window.location.hostname.endsWith(".vercel.app");
 
 // Local memory: the last finished run survives navigation (e.g. main <-> logs)
-// and full page reloads. Live (in-progress) runs are not resumable â€” the SSE
-// stream dies with the page â€” so only terminal runs are stored.
+// and full page reloads. Live (in-progress) runs are not resumable — the SSE
+// stream dies with the page — so only terminal runs are stored.
 const LAST_RUN_KEY = "codex-pilot:last-run:v1";
 type SavedRun = { run: Partial<PilotRun>; error: RunError | null; failedStage: string | null; savedAt: string };
 function slimRunForStorage(run: Partial<PilotRun>): Partial<PilotRun> {
@@ -182,7 +182,7 @@ const sample: PilotRun = {
   ],
   verification: {
     result: "verification_unavailable",
-    verdictLabel: "PATCH PROPOSED â€” NOT EXECUTED",
+    verdictLabel: "PATCH PROPOSED — NOT EXECUTED",
     summary: "This sample patch was not executed. Download it and run repository-defined QA in an approved developer environment.",
     durationMs: 0,
     stages: [
@@ -190,10 +190,10 @@ const sample: PilotRun = {
       /* Legacy sample execution details are intentionally not displayed.
       { id: "workspace", name: "Temporary workspace", status: "passed", detail: "Workspace created at .codex-pilot/workspaces/sample-123" },
       { id: "patch", name: "Patch application", status: "passed", detail: "2 files modified cleanly (src/hooks/useTheme.ts, src/providers/ThemeProvider.tsx)" },
-      { id: "detect", name: "Command detection", status: "passed", detail: "Detected: build: npm run build Â· test: npm test" },
-      { id: "build", name: "Static/build check", status: "passed", detail: "âœ“ npm run build passed in 1.4s" },
-      { id: "test", name: "Existing tests", status: "passed", detail: "âœ“ npm test passed: 14/14 passed" },
-      { id: "issue", name: "Issue verification", status: "passed", detail: "âœ“ Theme persistence after refresh verified" },
+      { id: "detect", name: "Command detection", status: "passed", detail: "Detected: build: npm run build · test: npm test" },
+      { id: "build", name: "Static/build check", status: "passed", detail: "✓ npm run build passed in 1.4s" },
+      { id: "test", name: "Existing tests", status: "passed", detail: "✓ npm test passed: 14/14 passed" },
+      { id: "issue", name: "Issue verification", status: "passed", detail: "✓ Theme persistence after refresh verified" },
       */
     ],
   },
@@ -337,7 +337,7 @@ export default function Home() {
       try {
         window.localStorage.removeItem(LAST_RUN_KEY);
       } catch {
-        // Storage unavailable â€” the app works fine without local memory.
+        // Storage unavailable — the app works fine without local memory.
       }
     }
   }, [run, error, failedStage]);
@@ -363,14 +363,14 @@ export default function Home() {
 
   useEffect(() => {
     document.title = loading
-      ? `Codex Pilot Â· Investigating ${active.issue.repository}`
+      ? `Codex Pilot · Investigating ${active.issue.repository}`
       : verifying
-      ? "Codex Pilot Â· Verifying patch"
+      ? "Codex Pilot · Verifying patch"
       : active.verification?.result === "verified"
-      ? "Codex Pilot Â· Verified fix"
+      ? "Codex Pilot · Verified fix"
       : active.files.length
-      ? "Codex Pilot Â· Patch proposed"
-      : "Codex Pilot â€” Autonomous GitHub Issue Solver";
+      ? "Codex Pilot · Patch proposed"
+      : "Codex Pilot — Autonomous GitHub Issue Solver";
   }, [active.files.length, active.issue.repository, active.verification?.result, loading, verifying]);
 
   function receive(event: RunEvent) {
@@ -512,7 +512,7 @@ export default function Home() {
       ...prev,
       verification: {
         result: "verification_unavailable",
-        verdictLabel: "PATCH PROPOSED â€” NOT EXECUTED",
+        verdictLabel: "PATCH PROPOSED — NOT EXECUTED",
         summary: "Codex Pilot does not execute target repository code. Download the patch and run repository-defined QA in an approved developer environment.",
         durationMs: 0,
         stages: [{ id: "workspace", name: "Developer-side QA", status: "skipped", detail: "Target repository execution is disabled." }],
@@ -534,10 +534,10 @@ export default function Home() {
       const demoSteps: { stage: VerificationStage; delay: number }[] = [
         { stage: { id: "workspace", name: "Temporary workspace", status: "passed", detail: "Creating disposable workspace at .codex-pilot/workspaces/sample-123..." }, delay: 400 },
         { stage: { id: "patch", name: "Patch application", status: "passed", detail: "Patch applied cleanly (2 files modified)" }, delay: 600 },
-        { stage: { id: "detect", name: "Command detection", status: "passed", detail: "Detected commands: build: npm run build Â· test: npm test" }, delay: 500 },
-        { stage: { id: "build", name: "Static/build check", status: "passed", detail: "âœ“ npm run build passed in 1.4s" }, delay: 700 },
-        { stage: { id: "test", name: "Existing tests", status: "passed", detail: "âœ“ npm test passed: 14/14 passed" }, delay: 800 },
-        { stage: { id: "issue", name: "Issue verification", status: "passed", detail: "âœ“ Theme persistence after refresh verified" }, delay: 500 },
+        { stage: { id: "detect", name: "Command detection", status: "passed", detail: "Detected commands: build: npm run build · test: npm test" }, delay: 500 },
+        { stage: { id: "build", name: "Static/build check", status: "passed", detail: "✓ npm run build passed in 1.4s" }, delay: 700 },
+        { stage: { id: "test", name: "Existing tests", status: "passed", detail: "✓ npm test passed: 14/14 passed" }, delay: 800 },
+        { stage: { id: "issue", name: "Issue verification", status: "passed", detail: "✓ Theme persistence after refresh verified" }, delay: 500 },
       ];
 
       const currentStages: VerificationStage[] = [];
@@ -623,7 +623,7 @@ export default function Home() {
                 verification: {
                   ...(prev.verification || {
                     result: "patch_applies_but_unverified",
-                    verdictLabel: "PATCH PROPOSED â€” NOT VERIFIED",
+                    verdictLabel: "PATCH PROPOSED — NOT VERIFIED",
                     summary: "Validation in progress...",
                     durationMs: 0,
                     stages: [],
@@ -678,7 +678,7 @@ export default function Home() {
     if (prCreating || loading) return;
     setPrError(null);
     if (active.source === "sample") {
-      setPrError({ code: "sample_run", title: "Sample data cannot be opened as a PR", message: "This is the built-in sample investigation â€” acme/astro-ui is not a real repository. Run a live investigation on a real public issue first." });
+      setPrError({ code: "sample_run", title: "Sample data cannot be opened as a PR", message: "This is the built-in sample investigation — acme/astro-ui is not a real repository. Run a live investigation on a real public issue first." });
       return;
     }
     if (!active.patch || active.files.length === 0) {
@@ -706,7 +706,7 @@ export default function Home() {
       return;
     }
     setPrCreating(true);
-    setPrProgress(["Starting PR flowâ€¦"]);
+    setPrProgress(["Starting PR flow…"]);
     setRun((prev) => (prev ? { ...prev, pullRequest: { status: "creating" } } : prev));
     try {
       const response = await fetch("/api/pull-requests", {
@@ -742,7 +742,7 @@ export default function Home() {
           return;
         }
         if (event.type === "stage") {
-          setPrProgress((prev) => [...prev.slice(-19), `${event.stage.label} â€” ${event.stage.status}${event.stage.detail ? `: ${event.stage.detail}` : ""}`]);
+          setPrProgress((prev) => [...prev.slice(-19), `${event.stage.label} — ${event.stage.status}${event.stage.detail ? `: ${event.stage.detail}` : ""}`]);
         } else if (event.type === "activity") {
           setPrProgress((prev) => [...prev.slice(-19), `${event.activity.action}: ${event.activity.detail}`]);
         } else if (event.type === "completed") {
@@ -793,7 +793,7 @@ export default function Home() {
       void fetch("/api/logs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level: "error", source, message: `${error.title} â€” ${error.message}`, code: error.code }),
+        body: JSON.stringify({ level: "error", source, message: `${error.title} — ${error.message}`, code: error.code }),
       }).catch(() => undefined);
     } catch {
       // Reporting must never break the UI.
@@ -868,10 +868,10 @@ export default function Home() {
               </span>
             )}
             <span className={(loading || verifying ? "animate-pulse bg-[#58a6ff]" : "bg-[#3fb950]") + " h-2 w-2 rounded-full"} />
-            {loading ? activeStage?.label || "Starting" : verifying ? "Verifying patchâ€¦" : hostedPreview ? "Hosted sample" : "Local agent ready"}
+            {loading ? activeStage?.label || "Starting" : verifying ? "Verifying patch…" : hostedPreview ? "Hosted sample" : "Local agent ready"}
             {restoredAt && !loading && (
               <>
-                <span className="text-[#6e7681]">Â· Restored {restoredAt}</span>
+                <span className="text-[#6e7681]">· Restored {restoredAt}</span>
                 <button onClick={clearSavedRun} className="text-[#58a6ff] hover:underline">
                   Clear
                 </button>
@@ -918,7 +918,7 @@ export default function Home() {
               className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#238636] px-4 text-sm font-medium text-white hover:bg-[#2ea043] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Icon name="play" />
-              {loading ? "Investigatingâ€¦" : hostedPreview ? "Live runs available locally" : "Run investigation"}
+              {loading ? "Investigating…" : hostedPreview ? "Live runs available locally" : "Run investigation"}
             </button>
           </form>
 
@@ -932,7 +932,7 @@ export default function Home() {
               {active.source === "sample" ? "SAMPLE RUN" : "LIVE RUN"}
             </span>
             {hostedPreview ? (
-              <span className="font-mono text-[11px] text-[#d29922]">DEMO MODE â€” live GitHub runs & verification are available locally</span>
+              <span className="font-mono text-[11px] text-[#d29922]">DEMO MODE — live GitHub runs & verification are available locally</span>
             ) : (
               <>
                 <span className="ml-1 text-xs text-[#8b949e]">Try an example:</span>
@@ -959,7 +959,7 @@ export default function Home() {
         {error && (
           <div role="alert" className="mb-5 rounded-md border border-[#f85149]/40 bg-[#f85149]/[.08] p-4">
             <p className="text-sm font-medium text-[#ff7b72]">
-              {failedStage ? `Failed at: ${failedStage} â€” ` : ""}{error.title}
+              {failedStage ? `Failed at: ${failedStage} — ` : ""}{error.title}
             </p>
             <p className="mt-1 font-mono text-[11px] text-[#8b949e]">code: {error.code}</p>
             <p className="mt-1 text-sm text-[#c9d1d9]">{error.message}</p>
@@ -1031,20 +1031,20 @@ export default function Home() {
                   )}
                   {name === "requirements" && (
                     active.requirements?.some((r) => r.status === "failed") ? (
-                      <span className="ml-1 text-[#f85149] font-bold">âœ—</span>
+                      <span className="ml-1 text-[#f85149] font-bold">✗</span>
                     ) : active.requirements?.length && active.requirements.every((r) => r.status === "implemented" || r.status === "tested" || r.status === "preserved") ? (
-                      <span className="ml-1 text-[#3fb950] font-bold">âœ“</span>
+                      <span className="ml-1 text-[#3fb950] font-bold">✓</span>
                     ) : null
                   )}
                   {name === "review" && (
                     active.review?.verdict === "approved" || (active.review?.status === "passed" && active.status === "completed") ? (
-                      <span className="ml-1 text-[#3fb950] font-bold">âœ“</span>
+                      <span className="ml-1 text-[#3fb950] font-bold">✓</span>
                     ) : active.review ? (
                       <span className="ml-1 text-[#d29922] font-bold">!</span>
                     ) : null
                   )}
                   {name === "verification" && active.verification?.result === "verified" && (
-                    <span className="ml-1 text-[#3fb950] font-bold">âœ“</span>
+                    <span className="ml-1 text-[#3fb950] font-bold">✓</span>
                   )}
                   {name === "verification" && active.verification && active.verification.result !== "verified" && (
                     <span className="ml-1 text-[#f85149] font-bold">!</span>
@@ -1156,7 +1156,7 @@ function PullRequestCard({
     return (
       <div className="mt-5 rounded-md border border-[#30363d] bg-[#161b22] p-4">
         <p className="font-mono text-[11px] font-medium uppercase tracking-[.14em] text-[#58a6ff]">Pull request</p>
-        <p className="mt-1 text-xs text-[#8b949e]">Sample data â€” run a live investigation on a real public issue to open a PR.</p>
+        <p className="mt-1 text-xs text-[#8b949e]">Sample data — run a live investigation on a real public issue to open a PR.</p>
       </div>
     );
   }
@@ -1164,7 +1164,7 @@ function PullRequestCard({
     return (
       <div className="mt-5 rounded-md border border-[#30363d] bg-[#161b22] p-4">
         <p className="font-mono text-[11px] font-medium uppercase tracking-[.14em] text-[#58a6ff]">Pull request</p>
-        <p className="mt-1 text-xs text-[#8b949e]">No patch yet â€” the PR button appears here once a patch is proposed.</p>
+        <p className="mt-1 text-xs text-[#8b949e]">No patch yet — the PR button appears here once a patch is proposed.</p>
       </div>
     );
   }
@@ -1174,12 +1174,12 @@ function PullRequestCard({
         <div className="min-w-0">
           <p className="font-mono text-[11px] font-medium uppercase tracking-[.14em] text-[#58a6ff]">Pull request</p>
           <p className="mt-1 text-sm font-medium text-white">
-            {opened ? "PR opened â€” review before merging" : "Turn this patch into a PR branch"}
+            {opened ? "PR opened — review before merging" : "Turn this patch into a PR branch"}
           </p>
           <p className="mt-1 text-xs leading-5 text-[#8b949e]">
             Codex Pilot clones the repo, applies the reviewed diff on a <span className="font-mono">codex-pilot/issue-N-*</span> branch,
             pushes that branch only, and opens a pull request. It never pushes to <span className="font-mono">{run.repository.branch}</span>.
-            {hostedPreview ? " PRs are disabled in this hosted preview â€” run locally." : ""}
+            {hostedPreview ? " PRs are disabled in this hosted preview — run locally." : ""}
           </p>
         </div>
         <div className="mt-4 flex shrink-0 items-center gap-2 sm:mt-0">
@@ -1189,14 +1189,14 @@ function PullRequestCard({
             className="inline-flex items-center gap-1.5 rounded-md bg-[#238636] px-3.5 py-2 text-xs font-medium text-white hover:bg-[#2ea043] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Icon name="arrow" />
-            {creating ? "Opening PRâ€¦" : opened ? "PR opened" : "Open pull request"}
+            {creating ? "Opening PR…" : opened ? "PR opened" : "Open pull request"}
           </button>
         </div>
       </div>
       {opened ? (
         <div className="mt-3 rounded border border-[#238636]/40 bg-[#238636]/10 p-3 text-xs">
           <a href={run.pullRequest!.prUrl} target="_blank" rel="noreferrer" className="font-medium text-[#aff5b4] hover:underline">
-            View pull request{run.pullRequest!.prNumber ? ` #${run.pullRequest!.prNumber}` : ""} â†—
+            View pull request{run.pullRequest!.prNumber ? ` #${run.pullRequest!.prNumber}` : ""} ↗
           </a>
           <p className="mt-1 font-mono text-[11px] text-[#8b949e]">Branch: {run.pullRequest!.branch}</p>
         </div>
@@ -1250,12 +1250,12 @@ function PatchHeader({
   const hasPatch = Boolean(run.patch && run.files.length > 0);
   const statusLabel = refused
     ? hasPatch
-      ? "PATCH PROPOSED â€” REVIEW UNRESOLVED"
+      ? "PATCH PROPOSED — REVIEW UNRESOLVED"
       : "NO PATCH PROPOSED"
     : run.verification
     ? run.verification.verdictLabel
     : run.files.length
-    ? "PATCH PROPOSED â€” NOT VERIFIED"
+    ? "PATCH PROPOSED — NOT VERIFIED"
     : "Investigation in progress";
 
   const statusColor = refused
@@ -1285,7 +1285,7 @@ function PatchHeader({
             <>
               {run.metrics.filesChanged || run.files.length} files modified{" "}
               <span className="ml-2 font-mono text-sm font-normal text-[#3fb950]">+{run.metrics.additions}</span>{" "}
-              <span className="font-mono text-sm font-normal text-[#f85149]">âˆ’{run.metrics.deletions}</span>
+              <span className="font-mono text-sm font-normal text-[#f85149]">−{run.metrics.deletions}</span>
               {refused && hasPatch && (
                 <span className="ml-2 rounded-full border border-[#d29922]/40 bg-[#d29922]/10 px-2 py-0.5 text-xs font-normal text-[#e3b341]">
                   Patch not approved
@@ -1310,7 +1310,7 @@ function PatchHeader({
             className="inline-flex items-center gap-1.5 rounded-md bg-[#238636] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#2ea043] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Icon name="check" />
-            {verifying ? "Opening QA guidanceâ€¦" : "QA guidance"}
+            {verifying ? "Opening QA guidance…" : "QA guidance"}
           </button>
           <button
             onClick={onDownload}
@@ -1344,7 +1344,7 @@ function Stage({ stage, activity }: { stage: PilotRun["stages"][number]; activit
           />
           <p className={(active ? "text-[#79c0ff]" : "text-[#c9d1d9]") + " text-xs font-medium"}>
             {stage.label}
-            {(stage.status === "skipped" || failed) && <span className="ml-2 text-[#8b949e]">â€” {stage.status}</span>}
+            {(stage.status === "skipped" || failed) && <span className="ml-2 text-[#8b949e]">— {stage.status}</span>}
           </p>
         </div>
         {stage.elapsedMs && <span className="font-mono text-[10px] text-[#6e7681]">{formatTime(stage.elapsedMs)}</span>}
@@ -1371,7 +1371,7 @@ function Stage({ stage, activity }: { stage: PilotRun["stages"][number]; activit
           ))}
         </div>
       )}
-      {active && <p className="ml-5 mt-2 font-mono text-[10px] text-[#58a6ff]">workingâ€¦</p>}
+      {active && <p className="ml-5 mt-2 font-mono text-[10px] text-[#58a6ff]">working…</p>}
     </div>
   );
 }
@@ -1386,7 +1386,7 @@ function Evidence({ run, expanded, setExpanded }: { run: PilotRun; expanded: str
           <div key={search.id ?? `${search.round ?? 0}-${search.query}-${index}`} className="mb-4 rounded border border-[#30363d] bg-[#0d1117] px-3 py-2">
             <p className="font-mono text-xs text-[#c9d1d9]">{search.query}</p>
             <p className="mt-1 text-[11px] text-[#8b949e]">
-              {search.matches} matches Â· {search.detail}
+              {search.matches} matches · {search.detail}
             </p>
           </div>
         ))}
@@ -1451,7 +1451,7 @@ function Diff({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#d29922]" />
             <p className="font-mono text-[11px] uppercase tracking-[.14em] text-[#e3b341]">
-              Safe Refusal â€” {refusalTitle}
+              Safe Refusal — {refusalTitle}
             </p>
           </div>
           <p className="mt-2 text-xs text-[#8b949e]">
@@ -1498,7 +1498,7 @@ function Diff({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#d29922]" />
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[.14em] text-[#e3b341]">
-              Patch Not Approved â€” Unresolved Concerns
+              Patch Not Approved — Unresolved Concerns
             </p>
           </div>
           <p className="mt-1 text-xs text-[#c9d1d9]">{run.refusal?.reason || "The reviewer found unaddressed concerns or missing requirements."}</p>
@@ -1575,7 +1575,7 @@ function Diff({
             </span>
             <span>{change.path.split("/").pop()}</span>
             <span className="ml-1 text-[#3fb950]">+{change.additions}</span>
-            <span className="ml-1 text-[#f85149]">âˆ’{change.deletions}</span>
+            <span className="ml-1 text-[#f85149]">−{change.deletions}</span>
           </button>
         ))}
       </div>
@@ -1673,7 +1673,7 @@ function Plan({ run }: { run: PilotRun }) {
                 <p className="text-sm text-white">{step.title}</p>
                 <p className="mt-1 text-xs text-[#8b949e]">{step.detail}</p>
                 {step.operation ? <p className="mt-1 font-mono text-[10px] uppercase tracking-[.1em] text-[#8b949e]">{step.operation}</p> : null}
-                {step.paths?.length ? <p className="mt-2 truncate font-mono text-[11px] text-[#79c0ff]">{step.paths.join(" Â· ")}</p> : null}
+                {step.paths?.length ? <p className="mt-2 truncate font-mono text-[11px] text-[#79c0ff]">{step.paths.join(" · ")}</p> : null}
               </div>
             </div>
           );
@@ -1706,7 +1706,7 @@ function Explanation({ run }: { run: PilotRun }) {
           <p className="font-mono text-[10px] uppercase tracking-[.12em] text-[#8b949e]">Patch review</p>
           {run.review.checks.map((check) => (
             <p key={check.label} className={(check.status === "passed" ? "text-[#aff5b4]" : "text-[#e3b341]") + " mt-3 text-xs"}>
-              {check.status === "passed" ? "âœ“" : "!"} {check.label}
+              {check.status === "passed" ? "✓" : "!"} {check.label}
             </p>
           ))}
         </div>
@@ -1761,7 +1761,7 @@ function ReviewPanel({ run }: { run: PilotRun }) {
           <div className="space-y-1.5">
             {review.feedback.map((item, idx) => (
               <div key={idx} className="rounded bg-[#0d1117] border border-[#30363d] p-3 text-xs text-[#e3b341]">
-                â€¢ {item}
+                • {item}
               </div>
             ))}
           </div>
@@ -1931,7 +1931,7 @@ function RequirementsPanel({ run }: { run: PilotRun }) {
                         : "bg-[#30363d] text-[#8b949e]"
                     }`}
                   >
-                    {isPassed ? "âœ“" : isFailed ? "âœ—" : isPlanned ? "â—‹" : "?"}
+                    {isPassed ? "✓" : isFailed ? "✗" : isPlanned ? "○" : "?"}
                   </span>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1966,7 +1966,7 @@ function RequirementsPanel({ run }: { run: PilotRun }) {
                         : "border-[#30363d] bg-[#161b22] text-[#8b949e]"
                     }`}
                   >
-                    {isPassed ? "âœ“ " : isFailed ? "âœ— " : ""}
+                    {isPassed ? "✓ " : isFailed ? "✗ " : ""}
                     {req.status}
                   </span>
                 </div>
@@ -2010,7 +2010,7 @@ function VerificationPanel({
   const verification = run.verification;
   const statusColors: Partial<Record<VerificationReport["verdictLabel"], string>> = {
     "VERIFIED FIX": "border-[#238636] bg-[#238636]/10 text-[#aff5b4]",
-    "PATCH PROPOSED â€” NOT VERIFIED": "border-[#d29922] bg-[#d29922]/10 text-[#e3b341]",
+    "PATCH PROPOSED — NOT VERIFIED": "border-[#d29922] bg-[#d29922]/10 text-[#e3b341]",
     "PATCH FAILED VERIFICATION": "border-[#f85149] bg-[#f85149]/10 text-[#ff7b72]",
   };
 
@@ -2024,7 +2024,7 @@ function VerificationPanel({
                 verification ? statusColors[verification.verdictLabel] : "border-[#d29922] bg-[#d29922]/10 text-[#e3b341]"
               }`}
             >
-              {verification ? verification.verdictLabel : "PATCH PROPOSED â€” NOT VERIFIED"}
+              {verification ? verification.verdictLabel : "PATCH PROPOSED — NOT VERIFIED"}
             </span>
             {verification?.durationMs ? (
               <span className="font-mono text-xs text-[#8b949e]">
@@ -2049,7 +2049,7 @@ function VerificationPanel({
                 verification.commandsDetected.lint && `lint: ${verification.commandsDetected.lint}`,
               ]
                 .filter(Boolean)
-                .join(" Â· ") || "None"}
+                .join(" · ") || "None"}
             </p>
           )}
         </div>
@@ -2060,7 +2060,7 @@ function VerificationPanel({
             className="inline-flex items-center gap-1.5 rounded-md bg-[#238636] px-3.5 py-2 text-xs font-medium text-white hover:bg-[#2ea043] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Icon name="check" />
-            {verifying ? "Opening QA guidanceâ€¦" : "Show QA guidance"}
+            {verifying ? "Opening QA guidance…" : "Show QA guidance"}
           </button>
         </div>
       </div>
@@ -2131,9 +2131,9 @@ function VerificationPanel({
 
       <div className="rounded-md border border-[#30363d] bg-[#161b22] p-4 text-xs text-[#8b949e] space-y-1">
         <p className="font-medium text-[#c9d1d9]">Developer-side QA contract</p>
-        <p>â€¢ Patch review stays inside a temporary, disposable working directory</p>
-        <p>â€¢ Pull requests open a feature branch only after your approval â€” never pushes to the base branch</p>
-        <p>â€¢ Preserves user clones and cleans up temporary files immediately after verification</p>
+        <p>• Patch review stays inside a temporary, disposable working directory</p>
+        <p>• Pull requests open a feature branch only after your approval — never pushes to the base branch</p>
+        <p>• Preserves user clones and cleans up temporary files immediately after verification</p>
       </div>
     </div>
   );
@@ -2183,5 +2183,3 @@ function How({ run, close }: { run: PilotRun; close: () => void }) {
     </div>
   );
 }
-
-

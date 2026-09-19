@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       const emit = (event: RunEvent) => {
         if (event.type === "failed") {
           const failedStage = event.run?.stages.find((stage) => stage.status === "failed")?.label;
-          logError("api/runs", `Run failed for ${issueUrl}${failedStage ? ` at ${failedStage}` : ""}: ${event.error.title} â€” ${event.error.message}`, {
+          logError("api/runs", `Run failed for ${issueUrl}${failedStage ? ` at ${failedStage}` : ""}: ${event.error.title} — ${event.error.message}`, {
             code: event.error.code,
           });
         } else if (event.type === "completed" && event.run.status === "refused") {
@@ -107,5 +107,3 @@ export async function POST(request: Request) {
   });
   return new Response(stream, { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" } });
 }
-
-

@@ -54,7 +54,7 @@ export default function SettingsPage() {
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="font-semibold text-white hover:underline">
-              â† Codex Pilot
+              ← Codex Pilot
             </Link>
             <span className="hidden border-l border-[#30363d] pl-3 text-xs font-normal text-[#8b949e] sm:block">
               Engine settings
@@ -69,7 +69,7 @@ export default function SettingsPage() {
       <section className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
         <h1 className="text-xl font-semibold text-white">Engine settings</h1>
         <p className="mt-1 text-sm text-[#8b949e]">
-          Choose what powers investigations. Settings live only in this browser â€” the API key is sent with each run
+          Choose what powers investigations. Settings live only in this browser — the API key is sent with each run
           request and never stored on the server.
         </p>
 
@@ -103,7 +103,7 @@ export default function SettingsPage() {
                 <span>
                   <span className="block text-sm font-medium text-white">OpenAI API</span>
                   <span className="mt-0.5 block text-xs text-[#8b949e]">
-                    Calls the OpenAI Responses API directly with your key. Billed by OpenAI â€” handy when your Codex
+                    Calls the OpenAI Responses API directly with your key. Billed by OpenAI — handy when your Codex
                     limit runs out.
                   </span>
                 </span>
@@ -122,7 +122,7 @@ export default function SettingsPage() {
                 type={showKey ? "text" : "password"}
                 value={settings.openaiApiKey}
                 onChange={(event) => update({ openaiApiKey: event.target.value })}
-                placeholder="sk-â€¦"
+                placeholder="sk-…"
                 autoComplete="off"
                 spellCheck={false}
                 disabled={settings.provider !== "openai"}
@@ -184,12 +184,10 @@ export default function SettingsPage() {
             >
               Save settings
             </button>
-            {saved && <span className="text-xs text-[#3fb950]">Saved â€” new investigations use this engine.</span>}
+            {saved && <span className="text-xs text-[#3fb950]">Saved — new investigations use this engine.</span>}
           </div>
         </div>
       </section>
     </main>
   );
 }
-
-

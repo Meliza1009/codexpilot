@@ -7,7 +7,7 @@ export type VerificationResult = "verified" | "patch_applies_but_unverified" | "
 export type VerificationStage = { id: "workspace" | "patch" | "detect" | "build" | "test" | "issue"; name: string; status: "pending" | "running" | "passed" | "failed" | "skipped"; detail?: string; output?: string; durationMs?: number };
 export type VerificationReport = {
   result: VerificationResult;
-  verdictLabel: "VERIFIED FIX" | "PATCH PROPOSED â€” NOT VERIFIED" | "PATCH PROPOSED â€” NOT EXECUTED" | "PATCH FAILED VERIFICATION";
+  verdictLabel: "VERIFIED FIX" | "PATCH PROPOSED — NOT VERIFIED" | "PATCH PROPOSED — NOT EXECUTED" | "PATCH FAILED VERIFICATION";
   workspace?: string;
   stages: VerificationStage[];
   commandsDetected?: { install?: string; build?: string; test?: string; lint?: string };
@@ -81,5 +81,3 @@ export type RunEvent =
   | { type: "verification"; verification: VerificationReport }
   | { type: "completed"; run: PilotRun }
   | { type: "failed"; error: RunError; run?: PilotRun };
-
-

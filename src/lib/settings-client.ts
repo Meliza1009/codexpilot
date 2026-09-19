@@ -1,4 +1,4 @@
-// Browser-side engine settings. Stored only in localStorage â€” the API key is
+// Browser-side engine settings. Stored only in localStorage — the API key is
 // sent with run requests over the local connection and never stored server-side.
 export type EngineProvider = "local" | "openai";
 
@@ -76,5 +76,3 @@ export function writeSettings(settings: EngineSettings): void {
     JSON.stringify({ provider: settings.provider, openaiApiKey: settings.openaiApiKey, openaiModel: settings.openaiModel || DEFAULT_OPENAI_MODEL })
   );
 }
-
-

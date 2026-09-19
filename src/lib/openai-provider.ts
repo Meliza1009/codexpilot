@@ -53,7 +53,7 @@ const MAX_API_RETRIES = 2;
 
 // Strict structured output only accepts a subset of JSON Schema keywords.
 // Length/range bounds (minLength, maxLength, minItems, maxItems, minimum,
-// maximum, â€¦) are rejected with a 400, so they are stripped before sending.
+// maximum, …) are rejected with a 400, so they are stripped before sending.
 // Local validation (conforms) still enforces them on the way back.
 const STRIPPED_KEYS = new Set([
   "minLength",
@@ -198,7 +198,7 @@ export function createOpenAIRunner(options: OpenAIRunnerOptions): CodexRunner {
           continue;
         }
         if (error instanceof Error && error.name === "TimeoutError") {
-          throw openaiError("OPENAI_TIMEOUT", `OpenAI step timed out (${model})`, "One OpenAI step exceeded the time limit. Retry â€” this restarts the run from scratch.", true);
+          throw openaiError("OPENAI_TIMEOUT", `OpenAI step timed out (${model})`, "One OpenAI step exceeded the time limit. Retry — this restarts the run from scratch.", true);
         }
         throw openaiError("OPENAI_NETWORK_ERROR", "Could not reach the OpenAI API", "Check your connection and retry.", true);
       }
@@ -248,5 +248,3 @@ export function createOpenAIRunner(options: OpenAIRunnerOptions): CodexRunner {
     return text;
   };
 }
-
-

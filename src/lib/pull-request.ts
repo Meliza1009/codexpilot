@@ -282,7 +282,7 @@ export async function openPullRequest(
   // Confirm the repository actually exists before creating workspaces or forks.
   // A missing repo (e.g. sample data) fails here instead of surfacing as a
   // confusing fork/push error later. Network errors are ignored so a blip
-  // never blocks a real PR â€” the clone step will report them clearly.
+  // never blocks a real PR — the clone step will report them clearly.
   try {
     const seen = await githubApi<{ private?: boolean; archived?: boolean; disabled?: boolean }>(
       fetchImpl,
@@ -293,7 +293,7 @@ export async function openPullRequest(
       throw prError(
         "invalid_target",
         "Repository not found on GitHub",
-        `No repository ${owner}/${repo} exists â€” this looks like sample data. Run a live investigation on a real public issue first.`,
+        `No repository ${owner}/${repo} exists — this looks like sample data. Run a live investigation on a real public issue first.`,
         false
       );
     }
@@ -307,7 +307,7 @@ export async function openPullRequest(
     }
   } catch (error) {
     if (error && typeof error === "object" && "code" in error) throw error;
-    // Network blip â€” continue; clone/push will surface real problems.
+    // Network blip — continue; clone/push will surface real problems.
   }
 
   const workspace = await createWorkspace();
@@ -345,7 +345,7 @@ export async function openPullRequest(
           throw prError(
             "pr_forbidden",
             "Could not fork repository",
-            `GitHub refused to create the fork (status ${forked.status}). ${message} Fine-grained tokens often cannot create forks even when reading works: fork ${owner}/${repo} in your browser (github.com/${owner}/${repo} â†’ Fork) and retry â€” Codex Pilot will reuse it â€” or use a classic PAT with the public_repo scope.`,
+            `GitHub refused to create the fork (status ${forked.status}). ${message} Fine-grained tokens often cannot create forks even when reading works: fork ${owner}/${repo} in your browser (github.com/${owner}/${repo} → Fork) and retry — Codex Pilot will reuse it — or use a classic PAT with the public_repo scope.`,
             forked.status >= 500
           );
         }
@@ -527,5 +527,3 @@ export async function openPullRequest(
     }
   }
 }
-
-

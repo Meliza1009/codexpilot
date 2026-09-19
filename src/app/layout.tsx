@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://codex-1-five.vercel.app"),
   title: {
-    default: "Codex Pilot â€” Autonomous GitHub Issue Solver",
-    template: "%s Â· Codex Pilot",
+    default: "Codex Pilot — Autonomous GitHub Issue Solver",
+    template: "%s · Codex Pilot",
   },
   description: "Autonomous GitHub issue investigation with visible repository evidence and reviewable patches.",
   openGraph: {
-    title: "Codex Pilot â€” Autonomous GitHub Issue Solver",
+    title: "Codex Pilot — Autonomous GitHub Issue Solver",
     description: "Paste a public GitHub issue. Watch Codex investigate the repository and prepare a patch.",
     type: "website",
   },
@@ -42,5 +42,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
-

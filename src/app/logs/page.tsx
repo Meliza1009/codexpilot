@@ -106,10 +106,10 @@ export default function LogsPage() {
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="font-semibold text-white hover:underline">
-              â† Codex Pilot
+              ← Codex Pilot
             </Link>
             <span className="hidden border-l border-[#30363d] pl-3 text-xs font-normal text-[#8b949e] sm:block">
-              Server logs â€” runs, PR flow & errors
+              Server logs — runs, PR flow & errors
             </span>
           </div>
           <div className="flex items-center gap-2 text-xs text-[#8b949e]">
@@ -117,7 +117,7 @@ export default function LogsPage() {
               Settings
             </Link>
             <span className="font-mono">
-              {entries.length} entries Â· {errors} errors Â· {warns} warnings{dropped > 0 ? ` Â· ${dropped} dropped` : ""}
+              {entries.length} entries · {errors} errors · {warns} warnings{dropped > 0 ? ` · ${dropped} dropped` : ""}
             </span>
             <span className={(paused ? "bg-[#484f58]" : "animate-pulse bg-[#3fb950]") + " h-2 w-2 rounded-full"} />
             {paused ? "Paused" : "Live"}
@@ -154,7 +154,7 @@ export default function LogsPage() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter by text, source, or codeâ€¦"
+            placeholder="Filter by text, source, or code…"
             aria-label="Filter logs"
             className="h-9 min-w-0 flex-1 rounded-md border border-[#30363d] bg-[#0d1117] px-3 text-sm outline-none placeholder:text-[#484f58] focus:border-[#58a6ff]"
           />
@@ -180,7 +180,7 @@ export default function LogsPage() {
               disabled={clearing}
               className="rounded-md border border-[#f85149]/40 px-3 py-1.5 text-[#ff7b72] hover:bg-[#f85149]/10 disabled:opacity-50"
             >
-              {clearing ? "Clearingâ€¦" : "Clear"}
+              {clearing ? "Clearing…" : "Clear"}
             </button>
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function LogsPage() {
         <div ref={listRef} className="mt-4 max-h-[70vh] space-y-2 overflow-auto rounded-md border border-[#30363d] bg-[#161b22] p-3">
           {visible.length === 0 ? (
             <p className="p-6 text-center text-sm text-[#8b949e]">
-              No log entries match. Run an investigation or open a PR â€” failures and warnings will show up here.
+              No log entries match. Run an investigation or open a PR — failures and warnings will show up here.
             </p>
           ) : (
             visible.map((entry) => (
@@ -215,11 +215,9 @@ export default function LogsPage() {
           )}
         </div>
         <p className="mt-3 text-xs text-[#6e7681]">
-          Server-side ring buffer keeps the last 500 entries (in-memory per server instance){dropped > 0 ? ` â€” ${dropped} older entries were dropped` : ""}. Secrets are redacted before storing.
+          Server-side ring buffer keeps the last 500 entries (in-memory per server instance){dropped > 0 ? ` — ${dropped} older entries were dropped` : ""}. Secrets are redacted before storing.
         </p>
       </section>
     </main>
   );
 }
-
-

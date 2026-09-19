@@ -200,7 +200,7 @@ export const plannerSchema = { type: "object", additionalProperties: false, requ
 } };
 // Strict structured output requires every properties key to be listed in required.
 // coderSchema once omitted "role" here and the model API rejected every patch
-// writing call with invalid_json_schema â€” keep this invariant (see schema audit test).
+// writing call with invalid_json_schema — keep this invariant (see schema audit test).
 export const coderSchema = { type: "object", additionalProperties: false, required: ["changes"], properties: { changes: { type: "array", minItems: 1, maxItems: MAX_CHANGED_FILES, items: { type: "object", additionalProperties: false, required: ["path", "updatedContent", "explanation", "operation", "role", "requirementsCovered"], properties: { path: { type: "string" }, operation: { type: "string", enum: ["create", "modify", "delete"] }, updatedContent: { type: "string", maxLength: MAX_FILE_BYTES }, explanation: { type: "string", minLength: 1 }, role: { type: "string", enum: ["source", "test", "docs", "config", "types", "generated"] }, requirementsCovered: { type: "array", minItems: 1, items: { type: "string" } } } } } } };
 
 export const reviewSchema = { type: "object", additionalProperties: false, required: ["missingRequirements", "requirementsCovered", "unrelatedChanges", "likelySyntaxRisk", "apiBreakageRisk", "evidenceSupported", "verdict", "feedback", "requirementCoverage"], properties: { missingRequirements: { type: "array", maxItems: 8, items: { type: "string" } }, requirementsCovered: { type: "boolean" }, unrelatedChanges: { type: "boolean" }, likelySyntaxRisk: { type: "boolean" }, apiBreakageRisk: { type: "boolean" }, evidenceSupported: { type: "boolean" }, verdict: { type: "string", enum: ["approve", "revise", "refuse"] }, feedback: { type: "array", maxItems: 4, items: { type: "string" } }, requirementCoverage: { type: "array", maxItems: 12, items: { type: "object", additionalProperties: false, required: ["id", "verdict"], properties: { id: { type: "string" }, verdict: { type: "string" } } } } } } as const;
@@ -225,12 +225,12 @@ async function responseJson<T>(runner: CodexRunner, instructions: string, input:
     } catch (error) {
       const err = error as { code?: string; title?: string; message?: string; stderr?: string; exitCode?: number | null; retryable?: boolean };
       // Runners (e.g. the OpenAI API provider) may already throw fully-formed
-      // diagnostics â€” preserve them instead of relabeling as a CLI failure.
+      // diagnostics — preserve them instead of relabeling as a CLI failure.
       if (typeof err?.code === "string" && typeof err?.title === "string" && typeof err?.message === "string") {
         return fail(err.code, err.title, err.message, Boolean(err.retryable));
       }
       const snippet = typeof err?.stderr === "string" && err.stderr.trim() ? ` Detail: ${redactSecrets(err.stderr.trim()).slice(-500)}` : "";
-      if (err?.code === "CODEX_TIMEOUT") return fail("CODEX_TIMEOUT", `Codex step timed out (${stageLabel})`, `One Codex step exceeded the 180s limit during ${stageLabel}.${snippet} Check Codex connectivity and retry â€” this restarts the run from scratch.`, true);
+      if (err?.code === "CODEX_TIMEOUT") return fail("CODEX_TIMEOUT", `Codex step timed out (${stageLabel})`, `One Codex step exceeded the 180s limit during ${stageLabel}.${snippet} Check Codex connectivity and retry — this restarts the run from scratch.`, true);
       if (err?.code === "CODEX_EXIT") return fail("CODEX_EXIT", `Codex step failed (${stageLabel})`, `Codex exited${typeof err.exitCode === "number" ? ` with status ${err.exitCode}` : ""} during ${stageLabel}.${snippet || " Check local Codex login and connectivity."} Retry to run it again.`, true);
       const known = typeof err?.message === "string" && err.message ? ` Detail: ${redactSecrets(err.message).slice(-500)}` : "";
       return fail("CODEX_UNAVAILABLE", `Codex CLI unavailable (${stageLabel})`, `The local Codex CLI could not complete the ${stageLabel} step.${known || " Check local login and connectivity."}`, true);
@@ -470,7 +470,7 @@ async function evaluateEvidence(state: AgentRunState, codex: CodexRunner, tools:
     if (inspection) { inspection.finding = evidence.findings.join("; "); inspection.reason = evidence.relevance; emit({ type: "inspection", inspection: { ...inspection } }); }
   }
   const reasonPreview = state.evidence.reason.length > 300 ? `${state.evidence.reason.slice(0, 297)}...` : state.evidence.reason;
-  tools.activity("evidence", state.evidence.decision === "ready_to_patch" ? "Evidence sufficient â€” continue to patch" : state.evidence.decision === "out_of_scope" ? "Required capability unavailable" : "Evidence insufficient â€” exploring again", reasonPreview, state.evidence.enoughEvidence ? "completed" : "warning");
+  tools.activity("evidence", state.evidence.decision === "ready_to_patch" ? "Evidence sufficient — continue to patch" : state.evidence.decision === "out_of_scope" ? "Required capability unavailable" : "Evidence insufficient — exploring again", reasonPreview, state.evidence.enoughEvidence ? "completed" : "warning");
   tools.stage("evidence", state.evidence.enoughEvidence ? "completed" : state.evidence.decision === "continue" ? "active" : "failed");
   return state.evidence.decision;
 }
@@ -480,7 +480,7 @@ async function exploreRepository(state: AgentRunState, encoded: string, client: 
   for (let round = 1; round <= MAX_EXPLORATION_ROUNDS; round += 1) {
     state.explorationRounds = round;
     const missingFacts = (state.evidence?.missingEvidence ?? []).map((item) => item.fact.length > 120 ? `${item.fact.slice(0, 117)}...` : item.fact);
-    tools.activity("exploring", `Exploration round ${round}${missingFacts.length ? ` â€” ${missingFacts.length} open question${missingFacts.length === 1 ? "" : "s"}` : ""}`, missingFacts.join("; ") || `Investigating ${state.analysis!.kinds.join(", ")} evidence surfaces.`);
+    tools.activity("exploring", `Exploration round ${round}${missingFacts.length ? ` — ${missingFacts.length} open question${missingFacts.length === 1 ? "" : "s"}` : ""}`, missingFacts.join("; ") || `Investigating ${state.analysis!.kinds.join(", ")} evidence surfaces.`);
     const matches = await searchRepository(state, encoded, queries, client, tools, emit, state.evidence?.repeatSearches);
     const ranked = rankedCandidates(state);
     const paths = [...new Set([...state.requestedFiles, ...ranked.filter((file) => matches.some((match) => match.path === file.path) || file.score > 1).map((file) => file.path)])].filter((path) => !state.originals.has(path));
@@ -1349,7 +1349,7 @@ export async function streamPilotRun(issueUrl: string, emit: (event: RunEvent) =
               code: diagnostic.code,
               reason: diagnostic.message,
               suggestedNextStep: /must map to implementation|SOURCE_CHANGE_REQUIRED|only targets tests or docs/i.test(diagnostic.message)
-                ? "The planner twice aimed implementation requirements at test files. Retry â€” each run explores differently â€” or narrow the issue toward the implementation file."
+                ? "The planner twice aimed implementation requirements at test files. Retry — each run explores differently — or narrow the issue toward the implementation file."
                 : diagnostic.retryable
                   ? "Retry after resolving the reported service or output error."
                   : "Check the issue and repository details.",
@@ -1360,5 +1360,3 @@ export async function streamPilotRun(issueUrl: string, emit: (event: RunEvent) =
     });
   }
 }
-
-

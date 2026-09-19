@@ -25,7 +25,7 @@ export async function verifyPatch(options: VerificationOptions): Promise<Verific
   };
   const report: VerificationReport = {
     result: "verification_unavailable",
-    verdictLabel: "PATCH PROPOSED â€” NOT EXECUTED",
+    verdictLabel: "PATCH PROPOSED — NOT EXECUTED",
     stages: [stage],
     summary: `Patch execution was not performed. Apply the downloaded patch to ${options.repositoryUrl} at ${options.commit || options.branch} and run repository-defined QA in your approved developer environment.`,
     durationMs: 0,
@@ -33,5 +33,3 @@ export async function verifyPatch(options: VerificationOptions): Promise<Verific
   options.onStep?.(stage, report);
   return report;
 }
-
-

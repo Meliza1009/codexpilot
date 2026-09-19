@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const encoder = new TextEncoder();
   const refused = (code: string, title: string, message: string): Response => {
-    logWarn("api/pull-requests", `Refused PR request: ${title} â€” ${message}`, { code });
+    logWarn("api/pull-requests", `Refused PR request: ${title} — ${message}`, { code });
     const event: PullRequestEvent = { type: "failed", error: { code, title, message } };
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     start(controller) {
       const emit = (event: PullRequestEvent) => {
         if (event.type === "failed") {
-          logError("api/pull-requests", `PR flow failed for issue #${input.issue?.number}: ${event.error.title} â€” ${event.error.message}`, {
+          logError("api/pull-requests", `PR flow failed for issue #${input.issue?.number}: ${event.error.title} — ${event.error.message}`, {
             code: event.error.code,
           });
         } else if (event.type === "completed") {
@@ -96,5 +96,3 @@ export async function POST(request: Request) {
   });
   return new Response(stream, { headers: sseHeaders() });
 }
-
-

@@ -27,7 +27,7 @@ let nextId = 1;
 let dropped = 0;
 
 function truncate(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max)}â€¦` : value;
+  return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
 function secretValues(): string[] {
@@ -141,5 +141,3 @@ export function logStats(): { total: number; dropped: number; errors: number; wa
     warns: entries.filter((entry) => entry.level === "warn").length,
   };
 }
-
-
